@@ -241,7 +241,7 @@ textarea{resize:vertical}
 
   <nav class="tabs" id="tabs" hidden>
     <button data-tab="cal" class="on">캘린더</button>
-    <button data-tab="sheet">월간 출역표</button>
+    <button data-tab="sheet">월간 작업표</button>
     <button data-tab="agg">집계 · 내역</button>
   </nav>
 
@@ -264,11 +264,11 @@ textarea{resize:vertical}
     <div class="tiles" id="stats"></div>
   </section>
 
-  <!-- 월간 출역표 -->
+  <!-- 월간 작업표 -->
   <section id="tab-sheet" hidden>
     <div class="sheet-wrap"><table class="sheet" id="sheetTbl"></table></div>
     <div class="legend">
-      <span>1 = 그날 출역 (1 M/D)</span>
+      <span>1 = 그날 일함 (1 M/D)</span>
       <span>소계 행 = 그 회사의 일별 투입 인원</span>
       <span><i style="background:rgba(255,107,107,.25)"></i>토·일·공휴일</span>
     </div>
@@ -291,11 +291,11 @@ textarea{resize:vertical}
     <div class="modal-body">
       <div class="ents" id="dayList"></div>
       <div id="dayForm">
-        <div class="formttl">출역 체크 <span class="muted" style="font-weight:600">· 하루 1 M/D</span></div>
+        <div class="formttl">작업 기입 <span class="muted" style="font-weight:600">· 하루 1 M/D</span></div>
         <div class="field"><label for="fWorker">이름 <em id="fWorkerHint">(최초 1회만 입력 — 이 기기에 기억됩니다)</em></label><input id="fWorker" autocomplete="off" placeholder="이름"></div>
         <div class="field"><span class="flabel">소속</span><div class="seg" id="fCoSeg"></div></div>
         <div class="field"><label for="fContent">작업내용 <em>(선택)</em></label><input id="fContent" autocomplete="off" placeholder="예: 스폿 티칭, 설비 설치"></div>
-        <button class="btn full" id="saveBtn">출역 저장 (1 M/D)</button>
+        <button class="btn full" id="saveBtn">기입 저장 (1 M/D)</button>
       </div>
     </div>
   </div>
@@ -330,7 +330,7 @@ textarea{resize:vertical}
     <div class="modal-body">
       <div class="field"><label for="pwInput">관리자 비밀번호</label><input id="pwInput" type="password" placeholder="비밀번호 입력"></div>
       <button class="btn full" id="pwSubmit">확인</button>
-      <div class="pw-note">관리자 모드에서만 두 회사의 투입 인원 전체 내역과 출역표·집계가 표시됩니다. 평소에는 기입만 가능합니다.</div>
+      <div class="pw-note">관리자 모드에서만 두 회사의 투입 인원 전체 내역과 작업표·집계가 표시됩니다. 평소에는 기입만 가능합니다.</div>
     </div>
   </div>
 </div>
@@ -376,7 +376,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const norm=s=>String(s||"").replace(/\s/g,"");
 const ko=(a,b)=>String(a).localeCompare(String(b),"ko");
 const pk=r=>norm(r.worker)+"|"+r.date;                       // 사람·날짜 키 (하루 1 M/D)
-const mdOf=rs=>new Set(rs.map(pk)).size;                       // M/D = 출역한 사람·날짜 수
+const mdOf=rs=>new Set(rs.map(pk)).size;                       // M/D = 일한 사람·날짜 수
 const pplOf=rs=>new Set(rs.map(r=>norm(r.worker))).size;
 function lsGet(k){try{return localStorage.getItem(k)||""}catch(e){return""}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
@@ -417,7 +417,7 @@ function normRec(r){
     company:i>=0?COMPANIES[i].name:String(r.company||"").trim(),content:String(r.content||"").trim()};
 }
 
-/* 인원별 묶음 (이름 공백 무시) — md = 출역일수 */
+/* 인원별 묶음 (이름 공백 무시) — md = 일한 날 수 */
 function byWorker(rs){
   const m=new Map();
   for(const r of rs){
@@ -487,7 +487,7 @@ function renderCal(){
         if(other)body+=`<span class="b"><span class="t">기타 </span>${other}</span>`;
         body+=`<span class="mdv">합계 ${pplOf(rs)}명</span>`;
       }
-    }else if(rs.some(isMineRec)){mine=true;body=`<span class="b me">✓ 출역</span>`}
+    }else if(rs.some(isMineRec)){mine=true;body=`<span class="b me">✓ 기입</span>`}
     const cls=["cell",hi.red?"sun":hi.dow===6?"sat":"",ds===today?"today":"",mine?"mine":""].join(" ");
     h+=`<button class="${cls}" data-d="${ds}" aria-label="${ds}"><span class="dn">${i+1}</span>${hi.label?`<span class="hl">${esc(hi.label)}</span>`:""}<span class="cb">${body}</span></button>`;
   });
@@ -495,19 +495,19 @@ function renderCal(){
   $("calGrid").innerHTML=h;
   $("calLegend").innerHTML=isAdmin
     ?COMPANIES.map((c,k)=>`<span><i style="background:var(--c${k})"></i>${esc(c.name)} 투입 인원</span>`).join("")+`<span><b style="color:var(--sun)">빨간 날짜</b> 일요일·공휴일</span>`
-    :`<span><b style="color:var(--acc)">✓ 출역</b> 내가 기입한 날 (하루 1 M/D)</span>`;
+    :`<span><b style="color:var(--acc)">✓ 기입</b> 내가 일한 날 (하루 1 M/D)</span>`;
 }
 
 function renderStats(){
   const rs=monthRecs();let h="";
   if(isAdmin){
-    h=COMPANIES.map((c,k)=>{const s=coStats(rs,c.name);return `<div class="tile t${k}"><div class="l k${k}">${esc(c.name)}</div><div class="v">${s.md}<small>M/D</small></div><div class="s">투입 인원 ${s.ppl}명 · 출역일 ${s.days}일</div></div>`}).join("");
+    h=COMPANIES.map((c,k)=>{const s=coStats(rs,c.name);return `<div class="tile t${k}"><div class="l k${k}">${esc(c.name)}</div><div class="v">${s.md}<small>M/D</small></div><div class="s">투입 인원 ${s.ppl}명 · 작업일 ${s.days}일</div></div>`}).join("");
     h+=`<div class="tile acc"><div class="l">이번 달 합계</div><div class="v">${mdOf(rs)}<small>M/D</small></div><div class="s">투입 인원 ${pplOf(rs)}명</div></div>`;
     h+=`<div class="tile"><div class="l">공사 누계</div><div class="v">${mdOf(cache)}<small>M/D</small></div><div class="s">${COMPANIES.map(c=>`${esc(c.short)} ${mdOf(cache.filter(r=>r.company===c.name))}`).join(" · ")}</div></div>`;
   }else{
     const mine=rs.filter(isMineRec),nm=lsGet(LS.name);
     h=`<div class="tile"><div class="l">이번 달 기록 건수</div><div class="v">${rs.length}<small>건</small></div></div>
-       <div class="tile acc"><div class="l">내 이번 달 M/D${nm?` · ${esc(nm)}`:""}</div><div class="v">${nm||mine.length?new Set(mine.map(r=>r.date)).size:"—"}${nm||mine.length?"<small>M/D</small>":""}</div><div class="s">${nm||mine.length?"출역한 날 수":"기입하면 표시됩니다"}</div></div>
+       <div class="tile acc"><div class="l">내 이번 달 M/D${nm?` · ${esc(nm)}`:""}</div><div class="v">${nm||mine.length?new Set(mine.map(r=>r.date)).size:"—"}${nm||mine.length?"<small>M/D</small>":""}</div><div class="s">${nm||mine.length?"일한 날 수":"기입하면 표시됩니다"}</div></div>
        <div class="tile lock"><div class="l">투입 인원</div><div class="v">🔒 관리자 전용</div></div>`;
   }
   $("stats").innerHTML=h;
@@ -549,7 +549,7 @@ function renderDay(){
   // 작업자는 그날 이미 체크했으면 입력창 대신 안내만 표시
   const done=!isAdmin&&show.length>0;
   $("dayForm").hidden=done;
-  if(done)$("dayList").insertAdjacentHTML("beforeend",`<div class="done-note"><b>✓ 이 날은 출역 체크 완료</b> (1 M/D). 잘못 넣었으면 ✕로 지우고 다시 기입하세요.</div>`);
+  if(done)$("dayList").insertAdjacentHTML("beforeend",`<div class="done-note"><b>✓ 이 날은 기입 완료</b> (1 M/D). 잘못 넣었으면 ✕로 지우고 다시 기입하세요.</div>`);
 }
 async function saveDay(){
   if(!online){alert("Supabase 연결 설정이 필요합니다. (index.html 상단 설정 확인)");return}
@@ -557,7 +557,7 @@ async function saveDay(){
   if(!worker){alert("이름을 입력해주세요.");$("fWorker").focus();return}
   const company=getCo("fCo");
   if(!company){alert(`소속을 선택해주세요. (${COMPANIES.map(c=>c.name).join(" / ")})`);return}
-  if(hasRecord(worker,selDate)){alert(`${worker}님은 이 날짜에 이미 출역 체크되어 있습니다. (하루 1 M/D)`);return}
+  if(hasRecord(worker,selDate)){alert(`${worker}님은 이 날짜에 이미 기입되어 있습니다. (하루 1 M/D)`);return}
   const content=$("fContent").value.trim();
   const btn=$("saveBtn");btn.disabled=true;btn.textContent="저장 중…";
   try{
@@ -565,15 +565,15 @@ async function saveDay(){
     if(error){alert("저장 실패: "+dupMsg(error));return}
     if(!isAdmin){lsSet(LS.name,worker);lsSet(LS.company,company);addMine((data||[]).map(r=>r.id))}
     await loadAll();renderAll();
-    if(!isAdmin){alert("출역 체크되었습니다. 감사합니다.");closeOv("dayOv");return}
+    if(!isAdmin){alert("기입되었습니다. 감사합니다.");closeOv("dayOv");return}
     renderDay();$("fWorker").value="";setCo("fCo","");$("fContent").value="";$("fWorker").focus();
     toast(`${worker} 저장됨`);
   }catch(e){alert("저장 중 오류: "+e.message)}
-  finally{btn.disabled=false;btn.textContent="출역 저장 (1 M/D)"}
+  finally{btn.disabled=false;btn.textContent="기입 저장 (1 M/D)"}
 }
 async function delRec(id){
   const r=cache.find(x=>x.id===id);if(!r||!canDelete(r))return;
-  if(!confirm(`${r.date} ${r.worker} 출역 기록을 삭제할까요?`))return;
+  if(!confirm(`${r.date} ${r.worker} 기록을 삭제할까요?`))return;
   try{
     const{error}=await sb.from(TABLE).delete().eq("id",id);
     if(error){alert("삭제 실패: "+error.message);return}
@@ -594,8 +594,8 @@ function applyMode(){
   $("tabs").hidden=!isAdmin;$("xlsBtn").hidden=!isAdmin;
   $("adminBtn").textContent=isAdmin?"관리자 해제":"관리자";$("adminBtn").classList.toggle("on",isAdmin);
   $("notice").innerHTML=isAdmin
-    ?`현재 <b>관리자 모드</b> · ${COMPANIES.map(c=>esc(c.name)).join(" · ")} 투입 인원의 출역표·집계를 볼 수 있습니다. 날짜를 누르면 대리 기입, <b>+ 일괄 기입</b>으로 여러 명·여러 날을 한 번에 넣을 수 있습니다.`
-    :`현재 <b>기입 모드</b> · ${SITE_NAME}에서 일한 날짜를 눌러 출역 체크하세요 (하루 1 M/D). 전체 인원·상세 내역은 관리자만 볼 수 있습니다.`;
+    ?`현재 <b>관리자 모드</b> · ${COMPANIES.map(c=>esc(c.name)).join(" · ")} 투입 인원의 작업표·집계를 볼 수 있습니다. 날짜를 누르면 대리 기입, <b>+ 일괄 기입</b>으로 여러 명·여러 날을 한 번에 넣을 수 있습니다.`
+    :`현재 <b>기입 모드</b> · ${SITE_NAME}에서 일한 날짜를 눌러 기입하세요 (하루 1 M/D). 전체 인원·상세 내역은 관리자만 볼 수 있습니다.`;
   if(!isAdmin)tab="cal";
   showTab(tab);
 }
@@ -616,7 +616,7 @@ function renderWorkerList(){
 }
 function fLabel(){return fCompany?` · ${fCompany}`:""}
 
-/* 월간 출역표 */
+/* 월간 작업표 */
 function renderSheet(){
   const days=monthDays(),today=ymd(new Date()),hinfo=days.map(holInfo);
   const rs=applyFilter(monthRecs()),ws=byWorker(rs),groups=groupWorkers(ws),byDate=byDateMap(rs),multi=groups.length>1;
@@ -652,18 +652,18 @@ function renderAgg(){
   $("aggTiles").innerHTML=`
     <div class="tile"><div class="l">이번 달 투입 인원</div><div class="v">${pplOf(rs)}<small>명</small></div></div>
     <div class="tile acc"><div class="l">이번 달 M/D</div><div class="v">${mdOf(rs)}</div></div>
-    <div class="tile"><div class="l">출역일</div><div class="v">${new Set(rs.map(r=>r.date)).size}<small>일</small></div></div>
+    <div class="tile"><div class="l">작업일</div><div class="v">${new Set(rs.map(r=>r.date)).size}<small>일</small></div></div>
     <div class="tile"><div class="l">공사 누계 M/D</div><div class="v">${mdOf(allRs)}</div><div class="s">누적 인원 ${pplOf(allRs)}명</div></div>`;
 
   // 회사별
   const cos=coList(rs).map(c=>coStats(rs,c));
-  $("aggCo").innerHTML=`<thead><tr><th>소속</th><th class="num">투입 인원</th><th class="num">출역일</th><th class="num">M/D</th></tr></thead><tbody>`+
+  $("aggCo").innerHTML=`<thead><tr><th>소속</th><th class="num">투입 인원</th><th class="num">작업일</th><th class="num">M/D</th></tr></thead><tbody>`+
     cos.map(s=>{const k=coCls(s.co);return `<tr><td><span class="dot${k}"></span><b class="k${k}">${esc(s.co)}</b></td><td class="num">${s.ppl}명</td><td class="num">${s.days}일</td><td class="num"><b>${s.md}</b></td></tr>`}).join("")+`</tbody>`+
     (cos.length>1?`<tfoot><tr class="all"><td>합계</td><td class="num">${pplOf(rs)}명</td><td class="num">${new Set(rs.map(r=>r.date)).size}일</td><td class="num">${mdOf(rs)}</td></tr></tfoot>`:"");
 
   // 인원별
   let prev=null;
-  $("aggWorker").innerHTML=`<thead><tr><th>이름</th><th>소속</th><th>첫 출역</th><th>마지막 출역</th><th class="num">M/D</th></tr></thead><tbody>`+
+  $("aggWorker").innerHTML=`<thead><tr><th>이름</th><th>소속</th><th>첫 작업일</th><th>마지막 작업일</th><th class="num">M/D</th></tr></thead><tbody>`+
     (ws.length?ws.map(w=>{const gap=prev!==null&&prev!==w.company;prev=w.company;
       return `<tr class="${gap?"gap":""}"><td><b>${esc(w.name)}</b></td><td><span class="chip c${coCls(w.company)}">${esc(w.company||"-")}</span></td><td>${w.first.slice(5)}</td><td>${w.last.slice(5)}</td><td class="num"><b>${w.md}</b></td></tr>`}).join("")
       :`<tr><td class="empty" colspan="5">기록 없음</td></tr>`)+`</tbody>`;
@@ -755,8 +755,8 @@ function exportXlsx(){
   const wb=XLSX.utils.book_new(),today=ymd(new Date()),fl=fCompany?`  (${fCompany})`:"";
   const W=n=>({wch:n});
 
-  // 1) 출역표
-  const aoa=[[`${SITE_NAME} 출역표 — ${Y}년 ${M}월${fl}`],[`출력일 ${today} · 1 = 출역 (하루 1 M/D) · * = 공휴일`],[]];
+  // 1) 작업표
+  const aoa=[[`${SITE_NAME} 작업표 — ${Y}년 ${M}월${fl}`],[`출력일 ${today} · 1 = 일함 (하루 1 M/D) · * = 공휴일`],[]];
   aoa.push(["No","소속","이름",...days.map((_,i)=>i+1),"M/D"]);
   aoa.push(["","","",...hinfo.map(h=>DOW[h.dow]+(h.label?"*":"")),""]);
   let no=0;
@@ -770,17 +770,17 @@ function exportXlsx(){
   const last=Math.min(3+days.length,25);
   s1["!cols"]=[W(4),W(13),W(11),...days.map(()=>W(3.5)),W(6)];
   s1["!merges"]=[{s:{r:0,c:0},e:{r:0,c:last}},{s:{r:1,c:0},e:{r:1,c:last}}];
-  XLSX.utils.book_append_sheet(wb,s1,`출역표_${mk}`);
+  XLSX.utils.book_append_sheet(wb,s1,`작업표_${mk}`);
 
   // 2) 회사별
   const cos=coList(rs).map(c=>coStats(rs,c));
-  const s2=[[`${SITE_NAME} 회사별 투입 현황 — ${Y}년 ${M}월${fl}`],[],["소속","투입 인원","출역일","M/D"],...cos.map(s=>[s.co,s.ppl,s.days,s.md])];
+  const s2=[[`${SITE_NAME} 회사별 투입 현황 — ${Y}년 ${M}월${fl}`],[],["소속","투입 인원","작업일","M/D"],...cos.map(s=>[s.co,s.ppl,s.days,s.md])];
   if(cos.length>1)s2.push(["합계",pplOf(rs),new Set(rs.map(r=>r.date)).size,mdOf(rs)]);
   const sh2=XLSX.utils.aoa_to_sheet(s2);sh2["!cols"]=[W(16),W(10),W(8),W(8)];
   XLSX.utils.book_append_sheet(wb,sh2,`회사별_${mk}`);
 
   // 3) 인원별
-  const s3=[["No","소속","이름","첫 출역","마지막 출역","M/D"],...ws.map((w,i)=>[i+1,w.company||"",w.name,w.first,w.last,w.md])];
+  const s3=[["No","소속","이름","첫 작업일","마지막 작업일","M/D"],...ws.map((w,i)=>[i+1,w.company||"",w.name,w.first,w.last,w.md])];
   const sh3=XLSX.utils.aoa_to_sheet(s3);sh3["!cols"]=[W(4),W(16),W(10),W(11),W(11),W(6)];
   XLSX.utils.book_append_sheet(wb,sh3,`인원별_${mk}`);
 
